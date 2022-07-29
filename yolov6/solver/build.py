@@ -5,6 +5,7 @@ import math
 
 import torch
 import torch.nn as nn
+from torch.distributed.optim import zero_redundancy_optimizer
 
 
 def build_optimizer(cfg, model):
@@ -18,11 +19,13 @@ def build_optimizer(cfg, model):
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
             g_w.append(v.weight)
 
-    assert cfg.solver.optim == 'SGD' or 'Adam', 'ERROR: unknown optimizer, use SGD defaulted'
+    assert cfg.solver.optim == 'SGD' or 'Adam' or 'zero', 'ERROR: unknown optimizer, use SGD defaulted'
     if cfg.solver.optim == 'SGD':
         optimizer = torch.optim.SGD(g_bnw, lr=cfg.solver.lr0, momentum=cfg.solver.momentum, nesterov=True)
     elif cfg.solver.optim == 'Adam':
         optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
+    elif cfg.solver.optim == 'zero' :
+        optimizer = zero_redundancy_optimizer(g_bnw, optimizer_class = torch.optim.Adam, lr=cfg.solver.lr0)
 
     optimizer.add_param_group({'params': g_w, 'weight_decay': cfg.solver.weight_decay})
     optimizer.add_param_group({'params': g_b})
