@@ -93,6 +93,8 @@ def main(args):
     args.rank, args.local_rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
     if args.local_rank != -1: # if DDP mode
+        print("ddp is working")
+        print(f'Rank : {args.rank}')
         torch.cuda.set_device(args.local_rank)
         device = torch.device('cuda', args.local_rank)
         LOGGER.info('Initializing process group... ')

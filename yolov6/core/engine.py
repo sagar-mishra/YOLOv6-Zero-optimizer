@@ -47,12 +47,13 @@ class Trainer:
         self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
         model = self.get_model(args, cfg, self.num_classes, device)
+        self.model = self.parallel_model(args, model, device)
         if cfg.training_mode == 'repopt':
             scales = self.load_scale_from_pretrained_models(cfg, device)
             reinit = False if cfg.model.pretrained is not None else True
-            self.optimizer = RepVGGOptimizer(model, scales, args, cfg, reinit=reinit)
+            self.optimizer = RepVGGOptimizer(self.model, scales, args, cfg, reinit=reinit)
         else:
-            self.optimizer = self.get_optimizer(args, cfg, model)
+            self.optimizer = self.get_optimizer(args, cfg, self.model)
         self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer)
         self.ema = ModelEMA(model) if self.main_process else None
         # tensorboard
@@ -67,7 +68,7 @@ class Trainer:
             if self.main_process:
                 self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
                 self.ema.updates = self.ckpt['updates']
-        self.model = self.parallel_model(args, model, device)
+        # self.model = self.parallel_model(args, model, device)
         self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
 
         self.max_epoch = args.epochs
